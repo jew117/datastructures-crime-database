@@ -1,45 +1,31 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const filterForm = document.querySelector('.filter-form');
-    const resultsContainer = document.querySelector('.crime-table-wrapper');
-    const applyButton = document.querySelector('.primary-btn');
+<?php
+session_start();
 
-   
-    if (filterForm && resultsContainer) {
-        
-        
-        filterForm.addEventListener('submit', function(e) {
-            e.preventDefault(); 
-            const originalBtnText = applyButton.innerHTML;
-            applyButton.textContent = 'Filtering...';
-            applyButton.disabled = true;
-            
-            resultsContainer.style.opacity = '0.5';
+// Security check: Ensure user is logged in
+if (!isset($_SESSION['user_id'])) {
+    http_response_code(401); 
+    echo "<p style='color: red;'>Session expired. Please log in again.</p>";
+    exit();
+}
 
-            const formData = new FormData(filterForm);
+// Include database connection and helper functions
+require __DIR__ . '/db.php';
+require __DIR__ . '/functions.php'; 
 
-            fetch('fetch_data.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.text();
-            })
-            .then(html => {
-                resultsContainer.innerHTML = html;
-                resultsContainer.style.opacity = '1';
-            })
-            .catch(error => {
-                console.error('Error fetching data:', error);
-                resultsContainer.innerHTML = '<p style="color: red;">An error occurred while filtering. Please try again.</p>';
-                resultsContainer.style.opacity = '1';
-            })
-            .finally(() => {
-                applyButton.innerHTML = originalBtnText;
-                applyButton.disabled = false;
-            });
-        });
-    }
-});
+// Is a user admin?
+$is_admin = $_SESSION['is_admin'] ?? false;
+
+// Collect filters
+$ajax_filters = [
+    'crime_type' => $_POST['crime_type'] ?? '',
+    'department' => $_POST['department'] ?? '',
+    'location'   => $_POST['search_term'] ?? '',
+    'start_date' => $_POST['start_date'] ?? '',
+    'end_date'   => $_POST['end_date'] ?? ''
+];
+
+
+$table_html = display_crime_data($mysqli, $ajax_filters, $is_admin);
+
+echo $table_html;
+?>

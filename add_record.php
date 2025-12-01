@@ -95,11 +95,20 @@ $is_admin = $_SESSION['is_admin'] ?? false;
 
                     <label for="crime_type" style="display:block; margin-top:10px;">Crime Type:</label>
                     <select id="crime_type" name="crime_type" class="filter-select" required>
-                        <option value="Theft">Theft</option>
-                        <option value="Assault">Assault</option>
+                        <option value="Aggravted Assault">Aggravted Assault</option>
+                        <option value="Arson">Arson</option>
+                        <option value="Burglary">Burglary</option>
+                        <option value="Homicide">Homicide</option>
+                        <option value="Kidnapping">Kidnapping</option>
+                        <option value="Motor Vehicle Theft">Motor Vehicle Theft</option>
+                        <option value="Rape">Rape</option>
                         <option value="Robbery">Robbery</option>
-                        <option value="Vandalism">Vandalism</option>
+                        <option value="Sexual Assault">Sexual Assault</option>
                         <option value="Suspicious Activity">Suspicious Activity</option>
+                        <option value="Sweetroll Stealing">Sweetroll Stealing</option>
+                        <option value="Theft">Theft</option>
+                        <option value="Treason">Treason</option>
+                        <option value="Vandalism">Vandalism</option>
                         <option value="Other">Other</option>
                     </select>
 

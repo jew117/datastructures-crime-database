@@ -80,7 +80,7 @@ function val($key, $record) {
                     <label>Crime Type:</label>
                     <select name="crime_type" class="filter-select">
                         <?php 
-                        $types = ['Theft','Assault','Robbery','Vandalism','Suspicious Activity','Other'];
+                        $types = ['Assault','Aggravted Assault', 'Arson', 'Burglary','Domestic Incident', 'Homicide', 'Kidnapping', 'Motor Vehicle Theft', 'Rape', 'Robbery', 'Sexual Assault', 'Suspicious Activity', 'Sweetroll Stealing', 'Theft', 'Treason', 'Vandalism', 'Other'];
                         foreach($types as $t) {
                             $sel = ($record['crime_type'] == $t) ? 'selected' : '';
                             echo "<option value='$t' $sel>$t</option>";

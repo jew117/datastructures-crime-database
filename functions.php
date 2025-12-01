@@ -67,74 +67,80 @@ function authenticate_user($mysqli, $email, $password) {
 
 function display_crime_data($mysqli, $filters = [], $is_admin = false) {
     
-    $incidents_query = "SELECT incident_id AS id, report_number, crime_type, incident_datetime, location, is_closed, 'official' AS source FROM incidents WHERE 1=1";
-    $civobs_query    = "SELECT id, report_number, crime_type, incident_datetime, location, is_closed, 'civilian' AS source FROM civObs WHERE 1=1";
+    $incidents_query = "SELECT incident_id AS id, department_code, report_number, crime_type, incident_datetime, location, 'official' AS source FROM incidents WHERE 1=1";
+    $civobs_query    = "SELECT id, department_code, report_number, crime_type, incident_datetime, location, 'civilian' AS source FROM civObs WHERE 1=1";
 
     $queries_to_run = []; 
-    $params = [];        
+    $params = [];         
     $types = '';          
 
     $dept_filter = $filters['department'] ?? '';
+    $start_date  = $filters['start_date'] ?? ''; 
+    $end_date    = $filters['end_date'] ?? '';   
 
+    // Incidents Queries
     if ($dept_filter === '' || $dept_filter === 'APD' || $dept_filter === 'UAPD') {
         $sql = $incidents_query;
         
         if ($dept_filter !== '') {
             $sql .= " AND department_code = ? ";
-            $types .= 's';
-            $params[] = $dept_filter;
+            $types .= 's'; $params[] = $dept_filter;
         }
+        
+        if ($start_date !== '') {
+            $sql .= " AND incident_datetime >= ? ";
+            $types .= 's'; $params[] = $start_date . " 00:00:00";
+        }
+        if ($end_date !== '') {
+            $sql .= " AND incident_datetime <= ? ";
+            $types .= 's'; $params[] = $end_date . " 23:59:59";
+        }
+
         if (!empty($filters['crime_type'])) {
             $sql .= " AND crime_type = ? ";
-            $types .= 's';
-            $params[] = $filters['crime_type'];
+            $types .= 's'; $params[] = $filters['crime_type'];
         }
         if (!empty($filters['location'])) {
             $sql .= " AND location LIKE ? ";
-            $types .= 's';
-            $params[] = '%' . $filters['location'] . '%';
+            $types .= 's'; $params[] = '%' . $filters['location'] . '%';
         }
-        if (isset($filters['is_closed']) && $filters['is_closed'] !== '') {
-            $sql .= " AND is_closed = ? ";
-            $types .= 'i';
-            $params[] = (int)$filters['is_closed'];
-        }
+        
         $queries_to_run[] = $sql;
     }
 
+    // Civ Queries
     if ($dept_filter === '' || $dept_filter === 'Civilian Observation') {
         $sql = $civobs_query;
 
+   
+        if ($start_date !== '') {
+            $sql .= " AND incident_datetime >= ? ";
+            $types .= 's'; $params[] = $start_date . " 00:00:00";
+        }
+        if ($end_date !== '') {
+            $sql .= " AND incident_datetime <= ? ";
+            $types .= 's'; $params[] = $end_date . " 23:59:59";
+        }
+
         if (!empty($filters['crime_type'])) {
             $sql .= " AND crime_type = ? ";
-            $types .= 's';
-            $params[] = $filters['crime_type'];
+            $types .= 's'; $params[] = $filters['crime_type'];
         }
         if (!empty($filters['location'])) {
             $sql .= " AND location LIKE ? ";
-            $types .= 's';
-            $params[] = '%' . $filters['location'] . '%';
+            $types .= 's'; $params[] = '%' . $filters['location'] . '%';
         }
-        if (isset($filters['is_closed']) && $filters['is_closed'] !== '') {
-            $sql .= " AND is_closed = ? ";
-            $types .= 'i';
-            $params[] = (int)$filters['is_closed'];
-        }
+        
         $queries_to_run[] = $sql;
     }
 
-    if (empty($queries_to_run)) {
-        return "<p>No data found.</p>";
-    }
+    if (empty($queries_to_run)) { return "<p>No data found.</p>"; }
 
     $final_sql = implode(" UNION ALL ", $queries_to_run);
     $final_sql .= " ORDER BY incident_datetime DESC LIMIT 100";
 
     $stmt = $mysqli->prepare($final_sql);
-
-    if (!$stmt) {
-        return "<p style='color: red;'>Database Query Error: " . htmlspecialchars($mysqli->error) . "</p>";
-    }
+    if (!$stmt) { return "<p style='color:red'>Query Error</p>"; }
 
     if (!empty($params)) {
         $stmt->bind_param($types, ...$params);
@@ -142,18 +148,20 @@ function display_crime_data($mysqli, $filters = [], $is_admin = false) {
 
     $stmt->execute();
     $result = $stmt->get_result();
-    $output = "";
+    
+    $output = ""; 
     
     if ($result->num_rows > 0) {
         $action_header = $is_admin ? "<th>Actions</th>" : "";
 
         $output .= "<table class='crime-table'>";
-        $output .= "<thead><tr><th>Report #</th><th>Type</th><th>Date/Time</th><th>Location</th>" . $action_header . "</tr></thead><tbody>";
+        $output .= "<thead><tr><th>Department</th><th>Report Number</th><th>Type</th><th>Date/Time</th><th>Location</th>" . $action_header . "</tr></thead><tbody>";
         
         while($row = $result->fetch_assoc()) {
             $row_style = ($row['source'] === 'civilian') ? 'style="background-color: #fff8e1;"' : '';
 
             $output .= "<tr $row_style>";
+            $output .= "<td><strong>" . htmlspecialchars($row['department_code']) . "</strong></td>";
             $output .= "<td>" . htmlspecialchars($row['report_number']) . "</td>";
             $output .= "<td>" . htmlspecialchars($row['crime_type']) . "</td>";
             $output .= "<td>" . htmlspecialchars(date('Y-m-d H:i', strtotime($row['incident_datetime'])) ?? 'N/A') . "</td>";
@@ -165,7 +173,6 @@ function display_crime_data($mysqli, $filters = [], $is_admin = false) {
                     <a href='delete_record.php?id=" . $row['id'] . "&source=" . $row['source'] . "'>Delete</a>
                  </td>";
             }
-            
             $output .= "</tr>";
         }
         $output .= "</tbody></table>";
@@ -178,10 +185,11 @@ function display_crime_data($mysqli, $filters = [], $is_admin = false) {
 }
 
 function get_record_by_id($mysqli, $id, $source) {
+    
     if ($source === 'civilian') {
-        $sql = "SELECT id, report_number, crime_type, incident_datetime, location, description, is_closed FROM civObs WHERE id = ?";
+        $sql = "SELECT id, report_number, crime_type, incident_datetime, location, description FROM civObs WHERE id = ?";
     } else {
-        $sql = "SELECT incident_id AS id, report_number, department_code, crime_type, incident_datetime, location, is_closed FROM incidents WHERE incident_id = ?";
+        $sql = "SELECT incident_id AS id, report_number, department_code, crime_type, incident_datetime, location FROM incidents WHERE incident_id = ?";
     }
 
     $stmt = $mysqli->prepare($sql);
@@ -204,8 +212,6 @@ function update_record($mysqli, $id, $source, $data) {
     } else {
         $dept = $data['department'];
         $reportNum = $data['report_number'];
-
-  
         $sql = "UPDATE incidents SET department_code=?, report_number=?, crime_type=?, incident_datetime=?, location=? WHERE incident_id=?";
         $stmt = $mysqli->prepare($sql);
         $stmt->bind_param("sssssi", $dept, $reportNum, $type, $date, $loc, $id);

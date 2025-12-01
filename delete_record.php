@@ -1,4 +1,5 @@
 <?php
+        //Do you wanna delete a record? This does just that.
 session_start();
 
 if (!isset($_SESSION['user_id']) || empty($_SESSION['is_admin'])) {
